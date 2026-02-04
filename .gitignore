@@ -1,0 +1,24 @@
+#les fichiers trop volumineux pour git repo
+*.pkl
+
+*.csv
+
+__pycache__/
+*.py[cod]
+*.pyc
+
+.ipynb_checkpoints/
+*.ipynb
+
+venv/
+env/
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+model_pred/
+data/
+

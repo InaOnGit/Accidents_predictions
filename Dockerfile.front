@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+LABEL maintainer="inaongit"
+LABEL version="1.0"
+LABEL description="Interface Streamlit pour prédiction d'accidents"
+LABEL project="prediction-accidents"
+
+WORKDIR /app
+COPY requirements-front.txt .
+RUN pip install --no-cache-dir -r requirements-front.txt
+COPY app.py . 
+EXPOSE 8501
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"]

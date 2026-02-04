@@ -1,0 +1,42 @@
+version: '3.8'
+
+services: 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: accidents-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - api-logs:/app/logs
+    networks:
+      - accidents-network
+    restart: unless-stopped
+
+  front:
+    build:
+      context: .
+      dockerfile: Dockerfile.front
+    container_name: accidents-front
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    volumes:
+      - front-logs:/app/logs
+    networks:
+      - accidents-network
+    restart: unless-stopped
+
+volumes:
+  api-logs:
+    driver: local
+  front-logs:
+    driver: local
+    
+networks:
+  accidents-network:
+    driver: bridge
