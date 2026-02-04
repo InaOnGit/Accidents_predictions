@@ -1,10 +1,7 @@
-version: '3.8'
-
 services: 
   api:
     build:
-      context: .
-      dockerfile: Dockerfile.api
+      context: ./backend/
     container_name: accidents-api
     ports:
       - "8000:8000"
@@ -16,8 +13,7 @@ services:
 
   front:
     build:
-      context: .
-      dockerfile: Dockerfile.front
+      context: ./frontend/
     container_name: accidents-front
     ports:
       - "8501:8501"
@@ -36,7 +32,7 @@ volumes:
     driver: local
   front-logs:
     driver: local
-    
+
 networks:
   accidents-network:
     driver: bridge
