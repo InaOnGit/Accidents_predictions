@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import json
 import os
 
 # Configuration de la page
