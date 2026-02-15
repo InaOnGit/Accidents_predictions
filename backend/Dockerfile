@@ -1,13 +1,17 @@
 FROM python:3.11-slim
 
-LABEL maintainer="inaongit"
-LABEL version="1.0"
-LABEL description="API de prédiction de gravité d'accidents routiers"
-LABEL project="prediction-accidents"
+WORKDIR /app
 
-WORKDIR /backend
-COPY . .
-RUN pip install -r requirements.txt
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_SYSTEM_PYTHON=1
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --frozen --no-dev
+
+COPY backend/api.py ./
+COPY backend/model_pred ./model_pred/
 
 EXPOSE 8000
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
