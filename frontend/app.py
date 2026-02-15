@@ -4,10 +4,7 @@ import requests
 import streamlit as st
 
 # Configuration de la page
-st.set_page_config(
-    page_title="Prédiction Accidents",
-    layout="centered"
-)
+st.set_page_config(page_title="Prédiction Accidents", layout="centered")
 
 # Titre
 st.title("Prédiction de Gravité d'Accident")
@@ -28,72 +25,79 @@ st.subheader("Caractéristiques de l'accident selon BAAC")
 col1, col2 = st.columns(2)
 
 with col1:
-    heure = st.slider("Heure de l'accident", 0, 23, 14,
-                      help="Heure de la journée (0-23h)")
+    heure = st.slider(
+        "Heure de l'accident", 0, 23, 14, help="Heure de la journée (0-23h)"
+    )
 
-    lum = st.selectbox("Luminosité",
-                       options=[1, 2, 3, 4, 5],
-                       format_func=lambda x: {
-                           1: "Plein jour",
-                           2: "Crépuscule/aube",
-                           3: "Nuit sans éclairage",
-                           4: "Nuit éclairage non allumé",
-                           5: "Nuit éclairage allumé"
-                       }[x])
+    lum = st.selectbox(
+        "Luminosité",
+        options=[1, 2, 3, 4, 5],
+        format_func=lambda x: {
+            1: "Plein jour",
+            2: "Crépuscule/aube",
+            3: "Nuit sans éclairage",
+            4: "Nuit éclairage non allumé",
+            5: "Nuit éclairage allumé",
+        }[x],
+    )
 
-    atm = st.selectbox("Conditions météo",
-                       options=[1, 2, 3, 4, 5, 6],
-                       format_func=lambda x: {
-                           1: "Normale",
-                           2: "Pluie légère",
-                           3: "Pluie forte",
-                           4: "Neige/grêle",
-                           5: "Brouillard",
-                           6: "Vent fort"
-                       }[x])
+    atm = st.selectbox(
+        "Conditions météo",
+        options=[1, 2, 3, 4, 5, 6],
+        format_func=lambda x: {
+            1: "Normale",
+            2: "Pluie légère",
+            3: "Pluie forte",
+            4: "Neige/grêle",
+            5: "Brouillard",
+            6: "Vent fort",
+        }[x],
+    )
 
     age = st.slider("Âge du conducteur", 16, 100, 30)
 
 with col2:
-    catr = st.selectbox("Type de route",
-                        options=[1, 2, 3, 4],
-                        format_func=lambda x: {
-                            1: "Autoroute",
-                            2: "Route nationale",
-                            3: "Route départementale",
-                            4: "Voie communale"
-                        }[x])
+    catr = st.selectbox(
+        "Type de route",
+        options=[1, 2, 3, 4],
+        format_func=lambda x: {
+            1: "Autoroute",
+            2: "Route nationale",
+            3: "Route départementale",
+            4: "Voie communale",
+        }[x],
+    )
 
-    agg = st.selectbox("Localisation",
-                       options=[1, 2],
-                       format_func=lambda x: {
-                           1: "Hors agglomération",
-                           2: "En agglomération"
-                       }[x])
+    agg = st.selectbox(
+        "Localisation",
+        options=[1, 2],
+        format_func=lambda x: {1: "Hors agglomération", 2: "En agglomération"}[x],
+    )
 
-    sexe = st.selectbox("Sexe",
-                        options=[1, 2],
-                        format_func=lambda x: {
-                            1: "Masculin",
-                            2: "Féminin"
-                        }[x])
+    sexe = st.selectbox(
+        "Sexe", options=[1, 2], format_func=lambda x: {1: "Masculin", 2: "Féminin"}[x]
+    )
 
-    catv = st.selectbox("Type de véhicule",
-                        options=[1, 2, 7, 10, 31, 33],
-                        format_func=lambda x: {
-                            1: "Vélo",
-                            2: "Cyclomoteur",
-                            7: "Voiture",
-                            10: "Utilitaire",
-                            31: "Moto 50-125cc",
-                            33: "Moto >125cc"
-                        }[x],
-                        index=2)
+    catv = st.selectbox(
+        "Type de véhicule",
+        options=[1, 2, 7, 10, 31, 33],
+        format_func=lambda x: {
+            1: "Vélo",
+            2: "Cyclomoteur",
+            7: "Voiture",
+            10: "Utilitaire",
+            31: "Moto 50-125cc",
+            33: "Moto >125cc",
+        }[x],
+        index=2,
+    )
 
 st.markdown("---")
 
 # Bouton de prédiction
-if st.button("Prédire la gravité de l'accident", type="primary", use_container_width=True):
+if st.button(
+    "Prédire la gravité de l'accident", type="primary", use_container_width=True
+):
     with st.spinner("Prédiction en cours..."):
         try:
             # Appeler l'API
@@ -107,7 +111,7 @@ if st.button("Prédire la gravité de l'accident", type="primary", use_container
                 "catr": catr,
                 "agg": agg,
                 "sexe": sexe,
-                "catv": catv
+                "catv": catv,
             }
 
             response = requests.post(url, params=params)
@@ -148,7 +152,9 @@ if st.button("Prédire la gravité de l'accident", type="primary", use_container
                     st.write("**Contexte de l'accident :**")
                     nuit = "Oui" if (heure >= 22 or heure <= 6) else "Non"
                     jeune = "Oui" if age < 25 else "Non"
-                    conditions = "Oui" if (atm in [2,3,4,5,6] or lum in [3,4]) else "Non"
+                    conditions = (
+                        "Oui" if (atm in [2, 3, 4, 5, 6] or lum in [3, 4]) else "Non"
+                    )
                     st.write(f"- Nuit : {nuit}")
                     st.write(f"- Jeune conducteur (<25 ans) : {jeune}")
                     st.write(f"- Conditions dangereuses : {conditions}")
@@ -158,7 +164,9 @@ if st.button("Prédire la gravité de l'accident", type="primary", use_container
 
         except requests.exceptions.ConnectionError:
             st.error("**Erreur de connexion à l'API**")
-            st.info("Assurez-vous que l'API est lancée avec : `uvicorn api:app --reload`")
+            st.info(
+                "Assurez-vous que l'API est lancée avec : `uvicorn api:app --reload`"
+            )
         except Exception as e:
             st.error(f"Erreur : {str(e)}")
 
