@@ -1,13 +1,16 @@
 FROM python:3.11-slim
 
-LABEL maintainer="inaongit"
-LABEL version="1.0"
-LABEL description="Interface Streamlit pour prédiction d'accidents"
-LABEL project="prediction-accidents"
+WORKDIR /app
 
-WORKDIR /frontend
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . . 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_SYSTEM_PYTHON=1
+
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --frozen --no-dev
+
+COPY frontend/app.py ./
+
 EXPOSE 8501
-CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"]
+CMD ["uv", "run", "streamlit", "run", "app.py", "--server.address", "0.0.0.0"]
