@@ -18,6 +18,8 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.7.0",
     "pytest>=7.4.0",
+    "types-requests>=2.32.4.20260107",
+    "pandas-stubs>=3.0.0.260204",
 ]
 
 [tool.ruff]
