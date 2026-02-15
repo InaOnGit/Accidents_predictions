@@ -11,7 +11,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 COPY backend/api.py ./
-COPY backend/model_pred ./model_pred/
+# COPY backend/model_pred ./model_pred/
 
 EXPOSE 8000
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
