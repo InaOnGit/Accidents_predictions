@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
-import pytest
+
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
@@ -10,12 +10,12 @@ with patch('joblib.load') as mock_load:
     mock_model = Mock() #on crée des mocks des vrais modèles qui sont commentés dans dockerfile
     mock_model.predict.return_value = [0]  #préd "Non grave"
     mock_model.predict_proba.return_value = [[0.7, 0.3]]  #probas
-    
+
     mock_columns = ['heure', 'lum', 'atm', 'age', 'catr', 'agg', 'sexe', 'catv',
                     'nuit', 'jeune_conducteur', 'conditions_dangereuses']
-    
+
     mock_load.side_effect = [mock_model, mock_columns]
-    
+
     from api import app
 
 client = TestClient(app)
