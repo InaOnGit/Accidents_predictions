@@ -1,6 +1,6 @@
 # Prédiction de la Gravité des Accidents Routiers
 
-Projet Machine Learning - Prédiction binaire (Grave / Non grave)
+Projet Machine Learning - Prédiction binaire (Grave / Non grave) avec monitoring Prometheus/Grafana
 
 ## Contexte
 
@@ -13,17 +13,22 @@ Ce projet utilise les données BAAC (Bulletins d'Analyse des Accidents Corporels
 ## Structure du projet
 ```
 accidents/
-├── accidents.ipynb                      # Notebook principal (EDA, modélisation)
-├── api.py                               # API FastAPI
-├── app.py                               # Interface Streamlit
-├── feature_names.json                   # Noms des features pour MLflow
-├── confusion_matrix.png                 # Matrice de confusion exportée
-├── roc_curve.png                        # Courbe ROC exportée
-├── model_pred/
-│   ├── model_logistic_regression.pkl    # Modèle entraîné (sélectionné)
-│   ├── model_random_forest.pkl          # Modèle alternatif
-│   └── model_columns.pkl               # Colonnes attendues
-└── README.md                            # Documentation
+├── backend/
+│   ├── api.py                  # API FastAPI instrumentée
+│   ├── metrics.py              # Métriques Prometheus custom
+│   ├── Dockerfile              # Build de l'API
+│   └── model_pred/             # Modèles ML entraînés
+├── frontend/
+│   ├── app.py                  # Interface Streamlit
+│   └── Dockerfile              # Build du frontend
+├── notebooks/
+│   └── accidents.ipynb         # Notebook EDA + modélisation + MLflow
+├── dashboards/
+│   ├── http_overview.json      # Dashboard Grafana HTTP
+│   └── predictions_ml.json     # Dashboard Grafana ML
+├── docker-compose.yml          # Stack complète (API, Prometheus, Grafana)
+├── prometheus.yml              # Configuration Prometheus
+└── README.md                   # Documentation
 ```
 
 ---
@@ -39,7 +44,58 @@ accidents/
 | F1-Score | 0.44 |
 | Accuracy | 68.9% |
 
-**Interprétation :** Le modèle détecte 2 accidents graves sur 3, ce qui est acceptable dans un contexte de sécurité routière. La matrice de confusion révèle : 18 006 vrais négatifs, 7 957 faux positifs (fausses alertes), 1 895 faux négatifs (graves manqués) et 3 808 vrais positifs.
+**Interprétation :** Le modèle détecte 2 accidents graves sur 3, ce qui est acceptable dans un contexte de sécurité routière.
+
+---
+
+## Monitoring & Observabilité
+
+Le projet intègre une stack complète de monitoring avec **Prometheus** et **Grafana**.
+
+### Architecture de monitoring
+
+```
+API FastAPI (/metrics) → Prometheus → Grafana (Dashboards)
+     ↓                        ↓
+ Métriques custom      node-exporter (métriques système)
+                       cAdvisor (métriques containers)
+```
+
+### Métriques collectées
+
+#### Métriques applicatives (custom)
+- `prediction_total` : Nombre total de prédictions par gravité
+- `prediction_probability` : Distribution des probabilités de prédiction
+- `model_inference_duration_seconds` : Latence d'inférence du modèle ML
+- `http_errors_total` : Erreurs HTTP par type et endpoint
+- `app_uptime_seconds` : Temps depuis le démarrage de l'application
+
+#### Métriques HTTP (automatiques via FastAPI Instrumentator)
+- `http_requests_total` : Nombre de requêtes par méthode, endpoint et status
+- `http_request_duration_seconds` : Latence des requêtes HTTP
+- `http_requests_inprogress` : Nombre de requêtes en cours
+
+#### Métriques infrastructure
+- **node-exporter** : CPU, RAM, disque, réseau
+- **cAdvisor** : Métriques des containers Docker
+
+### Dashboards Grafana
+
+**Dashboard 1 : HTTP Overview**
+- Requêtes par seconde
+- Latence P95
+- Taux d'erreur
+- Requêtes en cours
+- CPU Usage %
+- Memory Usage %
+
+**Dashboard 2 : Prédictions ML**
+- Total des prédictions
+- Prédictions par gravité (Grave/Non grave)
+- Probabilité moyenne
+- Latence d'inférence du modèle
+- Erreurs par type
+- CPU par container
 
 ---
 
@@ -73,88 +129,80 @@ Le projet utilise **MLflow** pour tracer et comparer les expériences :
 
 ---
 
-## Facteurs de risque identifiés (EDA)
+## Technologies
 
-Les analyses exploratoires montrent que les accidents graves sont plus fréquents :
-
-- La nuit (pics aux heures creuses, notamment 22h–6h)
-- Le week-end (samedi et dimanche)
-- Chez les jeunes conducteurs (< 25 ans) et les plus de 65 ans
-- Par mauvaises conditions météo (pluie forte, neige, brouillard, vent)
-- Sur routes départementales et hors agglomération
-- Impliquant des deux-roues motorisés (motos > 125 cm³, quads, cyclomoteurs)
+- **Backend** : Python 3.11, FastAPI, Uvicorn
+- **ML** : Scikit-learn, Pandas, NumPy
+- **MLOps** : MLflow, Optuna, XGBoost
+- **Frontend** : Streamlit
+- **Monitoring** : Prometheus, Grafana, prometheus-client, prometheus-fastapi-instrumentator
+- **Infrastructure** : Docker, Docker Compose, node-exporter, cAdvisor
 
 ---
 
-## Installation
+## Installation et déploiement
 
 ### Prérequis
 
-- Python 3.8+
+- Docker Desktop (version 20.10+)
+- Docker Compose (version 2.0+)
 
-### Installer les dépendances
+### Déploiement complet avec Docker Compose
+
 ```bash
-pip install pandas numpy scikit-learn joblib missingno
-pip install matplotlib seaborn
-pip install mlflow optuna optuna-integration[mlflow]
-pip install xgboost
-pip install fastapi uvicorn
-pip install streamlit requests
+# Cloner le repository
+git clone https://github.com/inaongit/Accidents_predictions.git
+cd Accidents_predictions
+
+# Lancer la stack complète
+docker compose up -d
 ```
 
----
+### Accéder aux services
 
-## Utilisation
+Une fois la stack lancée, vous pouvez accéder à :
 
-### Lancer MLflow (suivi des expériences)
+| Service | URL | Description |
+|---------|-----|-------------|
+| **API** | http://localhost:8000 | API FastAPI |
+| **API Docs** | http://localhost:8000/docs | Documentation Swagger |
+| **Métriques** | http://localhost:8000/metrics | Endpoint Prometheus |
+| **Frontend** | http://localhost:8501 | Interface Streamlit |
+| **Prometheus** | http://localhost:9090 | Interface Prometheus |
+| **Grafana** | http://localhost:3000 | Dashboards (admin/admin) |
+| **node-exporter** | http://localhost:9100/metrics | Métriques système |
+| **cAdvisor** | http://localhost:8080 | Métriques containers |
+
+### Commandes utiles
+
 ```bash
-mlflow ui
+# Démarrer tous les services
+docker compose up -d
+
+# Voir les logs
+docker compose logs -f
+
+# Voir les logs d'un service spécifique
+docker compose logs -f api
+
+# Arrêter les services
+docker compose down
+
+# Reconstruire et redémarrer
+docker compose up -d --build
+
+# Nettoyer tout (containers, volumes, networks)
+docker compose down -v
 ```
-Accéder à l'interface : http://localhost:5000
 
-### Lancer l'API
-```bash
-uvicorn api:app --reload
-```
+### Importer les dashboards Grafana
 
-Accéder à la documentation : http://127.0.0.1:8000/docs
-
-### Lancer l'interface Streamlit
-
-Dans un nouveau terminal :
-```bash
-streamlit run app.py
-```
-
-L'application s'ouvre sur : http://localhost:8501
-
----
-
-## Données
-
-**Source :** Base BAAC - data.gouv.fr  
-**Années :** 2022, 2023, 2024  
-**Volume :** 126 662 usagers (après exclusion des véhicules en fuite)
-
-**Fichiers sources par année :** `caract-{year}.csv`, `lieux-{year}.csv`, `vehicules-{year}.csv`, `usagers-{year}.csv`
-
-**Target :**
-- **0 - Non grave** : Indemne + Blessé léger (82%)
-- **1 - Grave** : Hospitalisé + Tué (18%)
-
----
-
-## Technologies
-
-- Python 3.11
-- Pandas / NumPy / Missingno
-- Scikit-learn
-- MLflow
-- Optuna
-- XGBoost
-- FastAPI
-- Streamlit
-- Uvicorn
+1. Se connecter à Grafana : http://localhost:3000 (admin/admin)
+2. Menu → **Dashboards** → **Import**
+3. Cliquer **Upload JSON file**
+4. Sélectionner `dashboards/http_overview.json` ou `dashboards/predictions_ml.json`
+5. Sélectionner **Prometheus** comme data source
+6. Cliquer **Import**
 
 ---
 
@@ -163,10 +211,26 @@ L'application s'ouvre sur : http://localhost:8501
 | Endpoint | Méthode | Description |
 |----------|---------|-------------|
 | `/` | GET | Page d'accueil |
-| `/health` | GET | État de l'API |
+| `/health` | GET | État de l'API + uptime |
 | `/predict` | POST | Prédiction de gravité |
+| `/metrics` | GET | Métriques Prometheus |
 
-**Paramètres de `/predict`** (passés en query params) :
+### Paramètres de `/predict`
+
+**Body JSON :**
+
+```json
+{
+  "heure": 14,
+  "lum": 1,
+  "atm": 1,
+  "age": 30,
+  "catr": 3,
+  "agg": 2,
+  "sexe": 1,
+  "catv": 7
+}
+```
 
 | Paramètre | Type | Plage | Défaut | Description |
 |-----------|------|-------|--------|-------------|
@@ -179,81 +243,29 @@ L'application s'ouvre sur : http://localhost:8501
 | `sexe` | int | 1–2 | 1 | Sexe (1=masculin, 2=féminin) |
 | `catv` | int | 1–33 | 7 | Type de véhicule |
 
-Les features dérivées (`nuit`, `jeune_conducteur`, `conditions_dangereuses`) sont calculées automatiquement côté API.
+Les features dérivées (`nuit`, `jeune_conducteur`, `conditions_dangereuses`) sont calculées automatiquement.
 
 ---
 
-## Déploiement avec Docker
+## Données
 
-### Prérequis
+**Source :** Base BAAC - data.gouv.fr  
+**Années :** 2022, 2023, 2024  
+**Volume :** 126 662 usagers (après exclusion des véhicules en fuite)
 
-- Docker Desktop installé (version 20.10+)
-- Docker Compose (version 2.0+)
+**Target :**
+- **0 - Non grave** : Indemne + Blessé léger (82%)
+- **1 - Grave** : Hospitalisé + Tué (18%)
 
-### Installation rapide
+---
 
-#### Option 1 : Avec Docker Compose (recommandé)
-```bash
-# Cloner le repository
-git clone https://github.com/inaongit/prediction-accidents.git
-cd prediction-accidents
+## Facteurs de risque identifiés
 
-# Copier le fichier d'environnement
-cp .env.example .env
+Les analyses exploratoires montrent que les accidents graves sont plus fréquents :
 
-# Lancer l'application
-docker-compose up -d
-```
-
-**Accéder à l'application :**
-- API : http://localhost:8000/docs
-- Interface : http://localhost:8501
-
-#### Option 2 : Avec les images DockerHub
-```bash
-# Télécharger et lancer l'API
-docker run -d -p 8000:8000 --name accidents-api inaongit/accidents-api:v1.0
-
-# Télécharger et lancer le Front
-docker run -d -p 8501:8501 --name accidents-front \
-  -e API_URL=http://accidents-api:8000 \
-  --link accidents-api \
-  inaongit/accidents-front:v1.0
-```
-
-### Commandes utiles
-```bash
-# Démarrer les services
-docker-compose up -d
-
-# Voir les logs
-docker-compose logs -f
-
-# Arrêter les services
-docker-compose down
-
-# Reconstruire les images
-docker-compose up --build
-
-# Nettoyer tout
-docker-compose down -v
-```
-
-### Images DockerHub
-
-Les images sont disponibles publiquement :
-- API : https://hub.docker.com/r/inaongit/accidents-api
-- Front : https://hub.docker.com/r/inaongit/accidents-front
-```bash
-docker pull inaongit/accidents-api:v1.0
-docker pull inaongit/accidents-front:v1.0
-```
-
-### Variables d'environnement
-
-Voir le fichier `.env.example` pour la liste complète des variables.
-
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| API_URL | URL de l'API | http://api:8000 |
-| ENVIRONMENT | Environnement | production |
+- La nuit (22h–6h)
+- Le week-end
+- Chez les jeunes conducteurs (< 25 ans) et les plus de 65 ans
+- Par mauvaises conditions météo
+- Sur routes départementales et hors agglomération
+- Impliquant des deux-roues motorisés
