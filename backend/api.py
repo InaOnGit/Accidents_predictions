@@ -1,17 +1,18 @@
 import time
 from contextlib import asynccontextmanager
+
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
 from prometheus_fastapi_instrumentator import Instrumentator
+from pydantic import BaseModel, Field
 
-from metrics import (
-    predictions_total, 
-    http_errors_total, 
-    probability_histogram, 
-    app_uptime_seconds, 
-    model_inference_duration_seconds
+from backend.metrics import (
+    app_uptime_seconds,
+    http_errors_total,
+    model_inference_duration_seconds,
+    predictions_total,
+    probability_histogram,
 )
 
 startup_time = time.time()
@@ -50,11 +51,11 @@ class PredictionInput(BaseModel):
     sexe: int = Field(ge=1, le=2, default=1, description="Sexe")
     catv: int = Field(ge=1, le=33, default=7, description="Type de véhicule")
 
-app = FastAPI( 
+app = FastAPI(
     title="API Prédiction Accidents",
     description="Prédiction de la gravité des accidents routiers",
     version="1.0.0",
-    lifespan=lifespan 
+    lifespan=lifespan
 )
 
 instrumentator = Instrumentator()
@@ -69,7 +70,7 @@ def home() -> dict:
 def health() -> dict:
     """Endpoint de health check."""
     app_uptime_seconds.set(time.time() - startup_time)
-    return {"status": "healthy", "model": "Logistic Regression", 
+    return {"status": "healthy", "model": "Logistic Regression",
             "uptime_seconds": time.time() - startup_time
     }
 
@@ -87,7 +88,7 @@ def predict(input: PredictionInput) -> dict:
     try:
         start_time = time.time()
 
-        data: dict[str, float] = {col: 0.0 for col in columns}
+        data: dict[str, float] = dict.fromkeys(columns, 0.0)
 
         data["heure"] = float(input.heure)
         data["lum"] = float(input.lum)
@@ -122,10 +123,10 @@ def predict(input: PredictionInput) -> dict:
             "probabilite_grave": proba_grave,
             "probabilite_non_grave": proba_non_grave,
         }
-    
+
     except ValueError as e:
         http_errors_total.labels(error_type="validation", endpoint="/predict").inc()
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except Exception as e:
         http_errors_total.labels(error_type="server_error", endpoint="/predict").inc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
