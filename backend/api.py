@@ -7,12 +7,12 @@ from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
-from backend.metrics import (
-    app_uptime_seconds,
-    http_errors_total,
-    model_inference_duration_seconds,
+from metrics import (
     predictions_total,
+    http_errors_total,
     probability_histogram,
+    app_uptime_seconds,
+    model_inference_duration_seconds
 )
 
 startup_time = time.time()
