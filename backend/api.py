@@ -4,18 +4,18 @@ from contextlib import asynccontextmanager
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from metrics import (
+    app_uptime_seconds,
+    http_errors_total,
+    model_inference_duration_seconds,
+    predictions_total,
+    probability_histogram,
+)
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
-from metrics import (
-    predictions_total,
-    http_errors_total,
-    probability_histogram,
-    app_uptime_seconds,
-    model_inference_duration_seconds
-)
-
 startup_time = time.time()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,15 +23,16 @@ async def lifespan(app: FastAPI):
     startup_time = time.time()
     yield
 
+
 instrumentator = Instrumentator(
-    should_group_status_codes = False,
-    should_ignore_untemplated = True,
-    should_respect_env_var = True,
-    should_instrument_requests_inprogress = True,
-    excluded_handlers = [".*admin.*", "/metrics"],
-    env_var_name = "ENABLE_METRICS",
-    inprogress_name = "http_requests_inprogress",
-    inprogress_labels = True,
+    should_group_status_codes=False,
+    should_ignore_untemplated=True,
+    should_respect_env_var=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=[".*admin.*", "/metrics"],
+    env_var_name="ENABLE_METRICS",
+    inprogress_name="http_requests_inprogress",
+    inprogress_labels=True,
 )
 
 try:
@@ -40,8 +41,10 @@ try:
 except FileNotFoundError as err:
     raise RuntimeError("Modèle non trouvé") from err
 
+
 class PredictionInput(BaseModel):
     """Schéma de validation pour les prédictions."""
+
     heure: int = Field(ge=0, le=23, default=14, description="Heure de l'accident")
     lum: int = Field(ge=1, le=5, default=1, description="Luminosité")
     atm: int = Field(ge=1, le=6, default=1, description="Conditions météo")
@@ -51,28 +54,34 @@ class PredictionInput(BaseModel):
     sexe: int = Field(ge=1, le=2, default=1, description="Sexe")
     catv: int = Field(ge=1, le=33, default=7, description="Type de véhicule")
 
+
 app = FastAPI(
     title="API Prédiction Accidents",
     description="Prédiction de la gravité des accidents routiers",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app, endpoint="/metrics")
+
 
 @app.get("/")
 def home() -> dict:
     """Point d'entrée de l'API."""
     return {"message": "API marche", "status": "OK"}
 
+
 @app.get("/health")
 def health() -> dict:
     """Endpoint de health check."""
     app_uptime_seconds.set(time.time() - startup_time)
-    return {"status": "healthy", "model": "Logistic Regression",
-            "uptime_seconds": time.time() - startup_time
+    return {
+        "status": "healthy",
+        "model": "Logistic Regression",
+        "uptime_seconds": time.time() - startup_time,
     }
+
 
 @app.post("/predict")
 def predict(input: PredictionInput) -> dict:
